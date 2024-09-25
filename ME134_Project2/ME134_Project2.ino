@@ -24,7 +24,7 @@ const char* ssid = "Tufts_Robot";
 const char* password = "";
 
 // MQTT Broker details
-const char* mqtt_broker = "10.243.82.33"; // my IP address. If MQTT is giving issues, use ifconfig to check this
+const char* mqtt_broker = ""; // my IP address. If MQTT is giving issues, use ifconfig to check this
 const char* topic = "ME134/motor";  
 const int mqtt_port = 1883;
 
