@@ -1,30 +1,35 @@
 #include <WiFi.h>  
-#include <PubSubClient.h> // MQTT library for Arduino
-#include <AccelStepper.h> // Library made by Mike Mcauley for advanced control of steppers
-#include <MultiStepper.h> // Class from AccelStepper for controlling multiple steppers simultaneously
+#include <PubSubClient.h>
+#include <AccelStepper.h>
+#include <MultiStepper.h>
 #include <math.h>
 
-// Define pins for the two steppers (change these based on wiring)
+// Define pins for the two steppers
 #define STEPPER1_STEP_PIN 36
 #define STEPPER1_DIR_PIN 39
 #define STEPPER2_STEP_PIN 34
 #define STEPPER2_DIR_PIN 35
 
-int stepsPerRevolution = 200;  // 200 steps for a standard NEMA 17 stepper motor
+// Define LED pins
+#define WIFI_LED_PIN 23  // Change to your LED pin
+#define MQTT_LED_PIN 22  // Change to your LED pin
+#define TRAJECTORY_LED_PIN 21  // Change to your LED pin
+#define ERROR_LED_PIN 19  // Change to your LED pin
+
+int stepsPerRevolution = 200;
 
 // Create AccelStepper objects for each motor
 AccelStepper stepper1(AccelStepper::DRIVER, STEPPER1_STEP_PIN, STEPPER1_DIR_PIN);
 AccelStepper stepper2(AccelStepper::DRIVER, STEPPER2_STEP_PIN, STEPPER2_DIR_PIN);
 
-// Create MultiStepper object to manage multiple steppers simultaneously
+// Create MultiStepper object
 MultiStepper steppers;
 
-// Replace with your network credentials
 const char* ssid = "Tufts_Robot";
 const char* password = "";
 
 // MQTT Broker details
-const char* mqtt_broker = ""; // my IP address. If MQTT is giving issues, use ifconfig to check this
+const char* mqtt_broker = ""; 
 const char* topic = "ME134/motor";  
 const int mqtt_port = 1883;
 
@@ -44,54 +49,59 @@ void setup_wifi() {
   }
   
   Serial.println("Connected to Wi-Fi");
+  digitalWrite(WIFI_LED_PIN, HIGH);  // Turn on Wi-Fi LED
 }
 
 // Function to move motors through an array of angles
 void moveMotors(float** angles, int numAngles) {
   long targetPositions[2];
 
-  // Iterate through the array of angles
   for (int currentAngleIndex = 0; currentAngleIndex < numAngles; currentAngleIndex++) {
-    // Convert angles to steps for each motor and store in the targetPositions array
-    targetPositions[0] = lround(angles[0][currentAngleIndex] * stepsPerRevolution / 360.0);  // Stepper 1
-    targetPositions[1] = lround(angles[1][currentAngleIndex] * stepsPerRevolution / 360.0);  // Stepper 2
+    targetPositions[0] = lround(angles[0][currentAngleIndex] * stepsPerRevolution / 360.0);  
+    targetPositions[1] = lround(angles[1][currentAngleIndex] * stepsPerRevolution / 360.0);  
 
-    // Move steppers to the target positions
     steppers.moveTo(targetPositions);
 
-    // Use steppers.run() to manage motor movements until both reach their target
     while (steppers.run()) {
-      // Continue running until the movement is completed "Pass" here in Python lol.
-      // Notably, this method is non-blocking AND indicates end of motor movement.
+      // Continue running until the movement is completed
     }
-    delay(10);  // take a short pause before moving to next set of points
+    delay(10);  // take a short pause
   }
+  digitalWrite(TRAJECTORY_LED_PIN, HIGH);  // Turn on Trajectory LED
 }
 
 // Function to parse the MQTT message into angles
 void parseAndMoveMotors(char* message, unsigned int length) {
-  // Create dynamic arrays for angles
-  int numAngles = length / 4;  // Assuming each angle is 4 bytes (e.g., "15.0,30.0")
+  int numAngles = 0;
+  for (int i = 0; i < length; i++) {
+    if (message[i] == ';') {
+      numAngles++;
+    }
+  }
+  numAngles++;  
+
   float** angles = new float*[2];
-  angles[0] = new float[numAngles];  // For Stepper 1 angles
-  angles[1] = new float[numAngles];  // For Stepper 2 angles
+  angles[0] = new float[numAngles];  
+  angles[1] = new float[numAngles];  
   
-  // Parse the message into two arrays of angles
-  char* token = strtok(message, ",");
+  char* token = strtok(message, ";");
   int index = 0;
   
   while (token != NULL && index < numAngles) {
-    angles[0][index] = atof(token);  // Parse angle for Stepper 1
-    token = strtok(NULL, ",");
-    angles[1][index] = atof(token);  // Parse angle for Stepper 2
-    token = strtok(NULL, ",");
+    char* angleToken = strtok(token, ",");
+    if (angleToken != NULL) {
+      angles[0][index] = atof(angleToken);  
+      angleToken = strtok(NULL, ",");
+      if (angleToken != NULL) {
+        angles[1][index] = atof(angleToken);  
+      }
+    }
+    token = strtok(NULL, ";");
     index++;
   }
 
-  // Move motors using the parsed angles
   moveMotors(angles, numAngles);
 
-  // Free dynamically allocated memory
   delete[] angles[0];
   delete[] angles[1];
   delete[] angles;
@@ -103,21 +113,20 @@ void MessageRecieved(char* topic, byte* message, unsigned int length) {
   Serial.println(topic);
   Serial.print("Message: ");
   
-  // Convert MQTT message to a string
   char msg[length + 1];
   for (int i = 0; i < length; i++) {
     msg[i] = (char)message[i];
   }
-  msg[length] = '\0';  // Null-terminate the string
+  msg[length] = '\0';  
 
   Serial.print("Message: ");
   Serial.println(msg);
 
-  // Parse and move the motors based on the received message
   parseAndMoveMotors(msg, length);
+  digitalWrite(MQTT_LED_PIN, HIGH);  // Turn on MQTT LED
 }
 
-// Reconnect function to ensure the client stays connected
+// Reconnect function
 void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
@@ -129,39 +138,40 @@ void reconnect() {
       Serial.print("Failed, rc=");
       Serial.print(client.state());
       Serial.println(" trying again in 5 seconds");
+      digitalWrite(ERROR_LED_PIN, HIGH);  // Turn on Error LED
       delay(5000);
     }
   }
+  digitalWrite(ERROR_LED_PIN, LOW);  // Turn off Error LED on successful connection
 }
 
 // MAIN SETUP CODE //
 void setup() {
   Serial.begin(115200); // establish serial connection
+  pinMode(WIFI_LED_PIN, OUTPUT);
+  pinMode(MQTT_LED_PIN, OUTPUT);
+  pinMode(TRAJECTORY_LED_PIN, OUTPUT);
+  pinMode(ERROR_LED_PIN, OUTPUT);
+  
   setup_wifi(); 
   
-  // Setup MQTT server and callback
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(MessageRecieved);
 
-  // STEPPER SETUP
-  // Set max speed and acceleration for each stepper (adjust these values based on your motors)
   stepper1.setMaxSpeed(200); 
   stepper1.setAcceleration(200);
   
   stepper2.setMaxSpeed(200);
   stepper2.setAcceleration(200);
 
-  // Add the steppers to the MultiStepper manager
   steppers.addStepper(stepper1);
   steppers.addStepper(stepper2);
-
 }
 
 // MAIN LOOPING CODE: "While True" //
 void loop() {
-  // make sure MQTT/wifi connection is maintained and reconnected if dropped during execution
   if (!client.connected()) {
-    reconnect(); // reconnecting also re-subscribes to MQTT topics!
+    reconnect();
   }
-  client.loop();  // Keep checking for incoming MQTT messages
+  client.loop();  
 }
