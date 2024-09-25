@@ -3,7 +3,7 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 #include <math.h>
-
+#include <mysecrets.h>
 // Define pins for the two steppers
 #define STEPPER1_STEP_PIN 36
 #define STEPPER1_DIR_PIN 39
@@ -25,12 +25,12 @@ AccelStepper stepper2(AccelStepper::DRIVER, STEPPER2_STEP_PIN, STEPPER2_DIR_PIN)
 // Create MultiStepper object
 MultiStepper steppers;
 
-const char* ssid = "Tufts_Robot";
-const char* password = "";
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PSWD;
 
 // MQTT Broker details
-const char* mqtt_broker = ""; 
-const char* topic = "ME134/motor";  
+const char* mqtt_broker = MQTT_IP; 
+const char* topic = "ME134/motors";
 const int mqtt_port = 1883;
 
 // WiFi and MQTT client objects
