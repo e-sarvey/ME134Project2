@@ -8,7 +8,7 @@ l1 = 8.5  # Length of upper arm
 l2 = 8.5  # Length of forearm
 
 # intialize mqtt params and connect to broker
-topic = "robot"
+topic = "ME134/motor"
 client_name = "Group_Two"
 client = mqtt.Client(client_name)
 client.connect("")
@@ -69,10 +69,6 @@ def invKin(x, y):
         print(f"Error occurred at (x, y) = ({x}, {y}): {e}")
         return None  # Return None if any error occurs during calculations
 
-def moveTime():
-    # function to estimate time needed for steppers to move. Will need to see if needed.
-    # Should iterate through points in thetas in main to find distance based on motor operating speed.
-
 def main():
     trajectory_x = [1, 2, 3] # example trajectories
     trajectory_y = [1, 2, 3]
@@ -83,21 +79,6 @@ def main():
     
     # use inverse kinematics to get motor angles
     thetas = [invKin(x,y) for x, y in zip(trajectory_x,trajectory_y)]
-    
-    # Calculate corresponding movement times
-    times = moveTime()
-    
-    # Combine each theta pair with corresponding time
-    if len(thetas) == len(times):
-        # Creating a list of triplets (theta1, theta2, time)
-        thetas_with_time = [(theta[0], theta[1], time) for theta, time in zip(thetas, times) if theta is not None]
-        
-        # Publish the result
-        client.publish(topic, str(thetas_with_time))
-        # print(f"Published thetas with time: {thetas_with_time}")
-    else:
-        print("Number of time values does not match number of theta pairs")
-        return
 
 
 ### RUNNING MAIN CODE ###
