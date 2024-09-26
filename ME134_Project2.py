@@ -125,8 +125,8 @@ def armSim(formatted_thetas):
     plt.show()
 
 def main():
-    trajectory_x = [-2, -2, 2, 2]  # Example trajectories (2x2 square)
-    trajectory_y = [12, 8, 8, 12]
+    trajectory_x = [0,-2, -2, 2, 2, -2,0]  # Example trajectories (2x2 square)
+    trajectory_y = [15.86,12, 10, 10, 12, 12,15.86]
 
     if len(trajectory_x) != len(trajectory_y):
         print("Desired trajectories are incompatible sizes")
@@ -138,9 +138,14 @@ def main():
     formatted_thetas = ";".join([f"{theta1:.2f},{theta2:.2f}" for theta1, theta2 in valid_thetas])
     
     print("Formatted theta string:", formatted_thetas)
+    print("-------------------------------------------")
+    time.sleep(1)
+    print("Peparing to send trajectory to ESP-32.......")
+    time.sleep(2)
+    print("SENT!")
     client.publish(topic, formatted_thetas)
     time.sleep(1)
-    armSim(formatted_thetas)
+    # armSim(formatted_thetas)
 
 ### RUNNING MAIN CODE ###
 try:

@@ -5,16 +5,20 @@
 #include <math.h>
 #include <mysecrets.h>
 // Define pins for the two steppers
-#define STEPPER1_STEP_PIN 36
-#define STEPPER1_DIR_PIN 39
-#define STEPPER2_STEP_PIN 34
-#define STEPPER2_DIR_PIN 35
+#define STEPPER1_STEP_PIN 4
+#define STEPPER1_DIR_PIN 0
+#define STEPPER2_STEP_PIN 12
+#define STEPPER2_DIR_PIN 14
 
 // Define LED pins
-#define WIFI_LED_PIN 23  // Change to your LED pin
-#define MQTT_LED_PIN 22  // Change to your LED pin
-#define TRAJECTORY_LED_PIN 21  // Change to your LED pin
-#define ERROR_LED_PIN 19  // Change to your LED pin
+#define WIFI_LED_PIN 35  // Change to your LED pin
+#define MQTT_LED_PIN 34  // Change to your LED pin
+#define TRAJECTORY_LED_PIN 39  // Change to your LED pin
+#define ERROR_LED_PIN 36  // Change to your LED pin
+
+/// Define the initial offset for the steppers (in degrees)
+const float INITIAL_OFFSET_1 = -90.0;  // Offset for Stepper 1
+const float INITIAL_OFFSET_2 = -90.0;  // Offset for Stepper 2
 
 int stepsPerRevolution = 200;
 
@@ -52,60 +56,106 @@ void setup_wifi() {
   digitalWrite(WIFI_LED_PIN, HIGH);  // Turn on Wi-Fi LED
 }
 
+
 // Function to move motors through an array of angles
 void moveMotors(float** angles, int numAngles) {
   long targetPositions[2];
 
   for (int currentAngleIndex = 0; currentAngleIndex < numAngles; currentAngleIndex++) {
-    targetPositions[0] = lround(angles[0][currentAngleIndex] * stepsPerRevolution / 360.0);  
-    targetPositions[1] = lround(angles[1][currentAngleIndex] * stepsPerRevolution / 360.0);  
+    // Apply the offset to the angles
+    float adjustedAngle1 = angles[0][currentAngleIndex] + INITIAL_OFFSET_1;
+    float adjustedAngle2 = angles[1][currentAngleIndex] + INITIAL_OFFSET_2;
 
-    steppers.moveTo(targetPositions);
+    targetPositions[0] = lround(adjustedAngle1 * stepsPerRevolution / 360.0);  
+    targetPositions[1] = lround(adjustedAngle2 * stepsPerRevolution / 360.0);  
+    Serial.print("Stepper 1 Target Position: ");
+    Serial.println(targetPositions[0]);
+    Serial.print("Stepper 2 Target Position: ");
+    Serial.println(targetPositions[1]);
+    
+    steppers.moveTo(targetPositions);  // Move both motors simultaneously
+    steppers.runSpeedToPosition();     // Blocking function, waits until both motors reach target
 
-    while (steppers.run()) {
-      // Continue running until the movement is completed
-    }
-    delay(10);  // take a short pause
+    delay(2000);  // Small pause between movements
   }
   digitalWrite(TRAJECTORY_LED_PIN, HIGH);  // Turn on Trajectory LED
 }
 
+
+
+// Function to parse the MQTT message into angles
 // Function to parse the MQTT message into angles
 void parseAndMoveMotors(char* message, unsigned int length) {
   int numAngles = 0;
+
+  // Make a copy of the message to avoid modifying the original
+  char* messageCopy = new char[length + 1];
+  strncpy(messageCopy, message, length);
+  messageCopy[length] = '\0';
+
+  // Count the number of semicolons to determine how many angle pairs there are
   for (int i = 0; i < length; i++) {
     if (message[i] == ';') {
       numAngles++;
     }
   }
-  numAngles++;  
+  numAngles++;  // One more than the number of semicolons
 
+  // Allocate memory for angles
   float** angles = new float*[2];
   angles[0] = new float[numAngles];  
   angles[1] = new float[numAngles];  
-  
-  char* token = strtok(message, ";");
+
+  // Use a single strtok loop to tokenize and parse the angle pairs
+  char* pairToken = strtok(messageCopy, ";");
   int index = 0;
-  
-  while (token != NULL && index < numAngles) {
-    char* angleToken = strtok(token, ",");
-    if (angleToken != NULL) {
-      angles[0][index] = atof(angleToken);  
-      angleToken = strtok(NULL, ",");
-      if (angleToken != NULL) {
-        angles[1][index] = atof(angleToken);  
-      }
+
+  while (pairToken != NULL && index < numAngles) {
+    // Use sscanf to parse both angles from the pair at once
+    float angle1, angle2;
+    if (sscanf(pairToken, "%f,%f", &angle1, &angle2) == 2) {
+      angles[0][index] = angle1;
+      angles[1][index] = angle2;
+    } else {
+      Serial.println("Error parsing angles!");
     }
-    token = strtok(NULL, ";");
+
+    pairToken = strtok(NULL, ";");
     index++;
   }
 
+  // Debugging: Print parsed angles
+  Serial.print("Parsed Motor 1 Angles: ");
+  for (int i = 0; i < numAngles; i++) {
+    Serial.print(angles[0][i]);
+    if (i < numAngles - 1) {
+      Serial.print(", ");
+    }
+  }
+  Serial.println();
+
+  Serial.print("Parsed Motor 2 Angles: ");
+  for (int i = 0; i < numAngles; i++) {
+    Serial.print(angles[1][i]);
+    if (i < numAngles - 1) {
+      Serial.print(", ");
+    }
+  }
+  Serial.println();
+
+  Serial.print("Total Parsed Angle Pairs: ");
+  Serial.println(numAngles);
+
   moveMotors(angles, numAngles);
 
+  // Clean up
   delete[] angles[0];
   delete[] angles[1];
   delete[] angles;
+  delete[] messageCopy;
 }
+
+
 
 // Callback function to handle incoming messages
 void MessageRecieved(char* topic, byte* message, unsigned int length) {
@@ -158,11 +208,11 @@ void setup() {
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(MessageRecieved);
 
-  stepper1.setMaxSpeed(200); 
-  stepper1.setAcceleration(200);
+  stepper1.setMaxSpeed(20); 
+  stepper1.setAcceleration(10);
   
-  stepper2.setMaxSpeed(200);
-  stepper2.setAcceleration(200);
+  stepper2.setMaxSpeed(20);
+  stepper2.setAcceleration(10);
 
   steppers.addStepper(stepper1);
   steppers.addStepper(stepper2);
