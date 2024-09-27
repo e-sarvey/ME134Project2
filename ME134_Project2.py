@@ -1,7 +1,7 @@
 import math
 import time
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # For the simulation
 import matplotlib.animation as animation
 import paho.mqtt.client as mqtt
 from mysecrets import tufts_robot, my_mqtt_broker
