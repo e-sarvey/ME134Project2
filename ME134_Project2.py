@@ -1,10 +1,10 @@
 import math
 import time
 import numpy as np
-import matplotlib.pyplot as plt # For the simulation
+import matplotlib.pyplot as plt # For the simulation option
 import matplotlib.animation as animation
-import paho.mqtt.client as mqtt
-from mysecrets import tufts_robot, my_mqtt_broker
+import paho.mqtt.client as mqtt # mqtt service library
+from mysecrets import tufts_robot, my_mqtt_broker # wifi and mqtt credentials from secrets file in git ignored
 
 # Arm lengths
 l0 = 4.25  # Half the base length between motors
@@ -19,7 +19,8 @@ client.connect(my_mqtt_broker["ip"])
 print(f'Connected to MQTT broker as {client}')
 
 def invKin(x, y):
-    # Get motor angles for a single point (x,y)
+# This function returns the desired motor angles for a single input point (x,y)
+# Based on code from an existing library, but modified to better handle errors, out of bound positions, and singularity points. Also replaced arccos() use with equivilant atan2() for increased robustness.
     try:
         distance = math.sqrt(x**2 + y**2)
         dist_left = math.sqrt((l0 + x)**2 + y**2)
@@ -47,6 +48,7 @@ def invKin(x, y):
         return None
 
 def armSim(formatted_thetas):
+# This function simulates the position of the arm and input path
     theta_pairs = formatted_thetas.split(";")
     
     fig, ax = plt.subplots()
@@ -125,17 +127,19 @@ def armSim(formatted_thetas):
     plt.show()
 
 def main():
+    # Input trajectory. This section can be updated to use a different trajectory planning function in the future.
     trajectory_x = [0,-2, -2, 2, 2, -2,0]  # Example trajectories (2x2 square)
-    trajectory_y = [15.86,12, 10, 10, 12, 12,15.86]
+    trajectory_y = [15.86,12, 10, 10, 12, 12,15.86] 
 
+    # trajectory vectors need to be the same length of course
     if len(trajectory_x) != len(trajectory_y):
         print("Desired trajectories are incompatible sizes")
         return
     
-    results = [invKin(x, y) for x, y in zip(trajectory_x, trajectory_y)]
-    thetas = [(math.degrees(result[0]), math.degrees(result[1])) if result else None for result in results]
-    valid_thetas = [theta for theta in thetas if theta is not None]
-    formatted_thetas = ";".join([f"{theta1:.2f},{theta2:.2f}" for theta1, theta2 in valid_thetas])
+    results = [invKin(x, y) for x, y in zip(trajectory_x, trajectory_y)] # perform ik on each corresponding pair of coordinates to get pair of angles
+    thetas = [(math.degrees(result[0]), math.degrees(result[1])) if result else None for result in results] # convert to degrees
+    valid_thetas = [theta for theta in thetas if theta is not None] # make sure None doesnt get passed to the ESP
+    formatted_thetas = ";".join([f"{theta1:.2f},{theta2:.2f}" for theta1, theta2 in valid_thetas]) # reformat into structure that matches parsing on ESP to be sent over MQTT
     
     print("Formatted theta string:", formatted_thetas)
     print("-------------------------------------------")
@@ -143,12 +147,13 @@ def main():
     print("Peparing to send trajectory to ESP-32.......")
     time.sleep(2)
     print("SENT!")
-    client.publish(topic, formatted_thetas)
+    client.publish(topic, formatted_thetas) # SEND OVER MQTT TO RUN ON ESP32 
     time.sleep(1)
     # armSim(formatted_thetas)
 
 ### RUNNING MAIN CODE ###
 try:
+    # everything runs in the function main() but put in a try-except block to clean up error handling :)
     main()
 except Exception as e:
     print(f"An error occurred: {e}")
