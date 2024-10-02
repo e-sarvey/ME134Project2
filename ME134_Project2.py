@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt # For the simulation option
 import matplotlib.animation as animation
 import paho.mqtt.client as mqtt # mqtt service library
 from mysecrets import tufts_robot, my_mqtt_broker # wifi and mqtt credentials from secrets file in git ignored
-
+from trackpad_tracing import TrackpadDraw
 # Arm lengths
 l0 = 4.25  # Half the base length between motors
 l1 = 8.5   # Length of upper arm
@@ -17,6 +17,8 @@ client_name = "Group_Two"
 client = mqtt.Client(client_name)
 client.connect(my_mqtt_broker["ip"])
 print(f'Connected to MQTT broker as {client}')
+
+drawer = TrackpadDraw()
 
 def invKin(x, y):
 # This function returns the desired motor angles for a single input point (x,y)
@@ -45,7 +47,42 @@ def invKin(x, y):
 
     except Exception as e:
         print(f"Error occurred at (x, y) = ({x}, {y}): {e}")
+        return None
+
+def workspaceMap(xlim=(-10, 10), ylim=(0, 20), resolution=100, x_traj=None, y_traj=None):
+    # Create a grid of points within the given limits
+    x_range = np.linspace(xlim[0], xlim[1], resolution)
+    y_range = np.linspace(ylim[0], ylim[1], resolution)
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_xlabel('X Coordinate')
+    ax.set_ylabel('Y Coordinate')
+    ax.set_title('Workspace Map')
+
+    # Plot workspace points with validity check
+    for x in x_range:
+        for y in y_range:
+            angles = invKin(x, y)
+            if angles is not None:
+                ax.plot(x, y, marker='o', color='lightgreen', markersize=2)  # Valid angles
+            else:
+                ax.plot(x, y, marker='o', color='lightcoral', markersize=2)  # Invalid (out of reach)
+    
+    # Plot the trajectory if provided
+    if x_traj is not None and y_traj is not None:
+        # Ensure x_traj and y_traj have the same length
+        if len(x_traj) != len(y_traj):
+            raise ValueError("x_traj and y_traj must have the same length")
         
+        # Plot the trajectory as a separate line
+        ax.plot(x_traj, y_traj, marker='o', color='blue', linestyle='-', label='Trajectory')
+        ax.legend()
+
+    plt.grid(True)
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.show()
 
 def armSim(formatted_thetas):
 # This function simulates the position of the arm and input path
@@ -130,8 +167,11 @@ def main():
     # Input trajectory. This section can be updated to use a different trajectory planning function in the future.
     #trajectory_x = [0,-2, -2, 2, 2, -2, 0]  # Example trajectories (2x2 square)
     #trajectory_y = [15.86,12, 10, 10, 12, 12,15.86] 
-    trajectory_x = [0, 0, 0 , 0, 0, 0, 0]  # Example trajectories (2x2 square)
-    trajectory_y = [15.86, 14, 13, 12, 11, 10, 15.86] 
+    #trajectory_x = [0, 0, 0 , 0, 0, 0, 0]  # Example trajectories (2x2 square)
+    #trajectory_y = [15.86, 14, 13, 12, 11, 10, 15.86]
+    trajectory_x, trajectory_y = drawer.clickDraw(save=False,scale_factor=5, offset=(-5/2, 9)) # you have to draw twice for some reason
+    time.sleep(0.5)
+    workspaceMap(x_traj=trajectory_x,y_traj=trajectory_y)
     # trajectory vectors need to be the same length of course
     if len(trajectory_x) != len(trajectory_y):
         print("Desired trajectories are incompatible sizes")
@@ -156,7 +196,7 @@ def main():
 try:
     # everything runs in the function main() but put in a try-except block to clean up error handling :)
     main()
-except Exception as e:
-    print(f"An error occurred: {e}")
+# except Exception as e:
+#     print(f"An error occurred: {e}")
 finally:
     print("Program Finished")
