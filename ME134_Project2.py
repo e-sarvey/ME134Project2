@@ -7,9 +7,9 @@ import paho.mqtt.client as mqtt # mqtt service library
 from mysecrets import tufts_robot, my_mqtt_broker # wifi and mqtt credentials from secrets file in git ignored
 from trackpad_tracing import TrackpadDraw
 # Arm lengths
-l0 = 4.25  # Half the base length between motors
-l1 = 8.5   # Length of upper arm
-l2 = 8.5   # Length of forearm
+l0 = 3.5  # Half the base length between motors
+l1 = 7   # Length of upper arm
+l2 = 7   # Length of forearm
 
 # Initialize MQTT params and connect to broker
 topic = "ME134/motors"
@@ -46,7 +46,7 @@ def invKin(x, y):
         return (shoulder1, shoulder2)
 
     except Exception as e:
-        print(f"Error occurred at (x, y) = ({x}, {y}): {e}")
+        #print(f"Error occurred at (x, y) = ({x}, {y}): {e}")
         return None
 
 def workspaceMap(xlim=(-10, 10), ylim=(0, 20), resolution=100, x_traj=None, y_traj=None):
@@ -54,7 +54,7 @@ def workspaceMap(xlim=(-10, 10), ylim=(0, 20), resolution=100, x_traj=None, y_tr
     x_range = np.linspace(xlim[0], xlim[1], resolution)
     y_range = np.linspace(ylim[0], ylim[1], resolution)
     
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.set_xlabel('X Coordinate')
@@ -169,7 +169,7 @@ def main():
     #trajectory_y = [15.86,12, 10, 10, 12, 12,15.86] 
     #trajectory_x = [0, 0, 0 , 0, 0, 0, 0]  # Example trajectories (2x2 square)
     #trajectory_y = [15.86, 14, 13, 12, 11, 10, 15.86]
-    trajectory_x, trajectory_y = drawer.clickDraw(save=False,scale_factor=5, offset=(-5/2, 9)) # you have to draw twice for some reason
+    trajectory_x, trajectory_y = drawer.clickDraw(save=False,scale_factor=4, offset=(-1.5, 7.5)) # you have to draw twice for some reason
     time.sleep(0.5)
     workspaceMap(x_traj=trajectory_x,y_traj=trajectory_y)
     # trajectory vectors need to be the same length of course
