@@ -21,11 +21,11 @@ void setup() {
   
   // STEPPER SETUP
   // Set max speed and acceleration for each stepper (adjust these values based on your motors)
-  stepper1.setMaxSpeed(500);
-  stepper1.setAcceleration(200);
+  stepper1.setMaxSpeed(100);
+  stepper1.setAcceleration(50);
   
-  stepper2.setMaxSpeed(500);
-  stepper2.setAcceleration(200);
+  stepper2.setMaxSpeed(100);
+  stepper2.setAcceleration(50);
 
   // Add the steppers to the MultiStepper manager
   steppers.addStepper(stepper1);
@@ -35,9 +35,39 @@ void setup() {
 void loop() {
   long targetPositions[2];
 
-  // Move both steppers forward 180 degrees
-  targetPositions[0] = lround(180.0 * stepsPerRevolution / 360.0);  // Stepper 1
-  targetPositions[1] = lround(180.0 * stepsPerRevolution / 360.0);  // Stepper 2
+  // Move stepper 1 forward 180 degrees
+  stepper1.moveTo(lround(30.0 * stepsPerRevolution / 360.0));
+  while (stepper1.run()) {
+    // Keep running until the movement is completed
+  }
+
+  // Move stepper 1 back 180 degrees
+  stepper1.moveTo(-lround(30.0 * stepsPerRevolution / 360.0));
+  while (stepper1.run()) {
+    // Keep running until the movement is completed
+  }
+  Serial.println("Stepper 1 moved back and forth");
+
+  delay(1000); // Pause for a moment
+
+  // Move stepper 2 forward 180 degrees
+  stepper2.moveTo(lround(30.0 * stepsPerRevolution / 360.0));
+  while (stepper2.run()) {
+    // Keep running until the movement is completed
+  }
+
+  // Move stepper 2 back 180 degrees
+  stepper2.moveTo(-lround(30.0 * stepsPerRevolution / 360.0));
+  while (stepper2.run()) {
+    // Keep running until the movement is completed
+  }
+  Serial.println("Stepper 2 moved back and forth");
+
+  delay(1000); // Pause for a moment
+
+  // Now move both steppers forward 180 degrees simultaneously
+  targetPositions[0] = lround(30.0 * stepsPerRevolution / 360.0);  // Stepper 1
+  targetPositions[1] = lround(30.0 * stepsPerRevolution / 360.0);  // Stepper 2
 
   // Move steppers to the target positions
   steppers.moveTo(targetPositions);
@@ -48,11 +78,11 @@ void loop() {
   }
 
   delay(1000); // Pause for a moment
-  Serial.println("Moved forward 180 degrees");
+  Serial.println("Both steppers moved forward 180 degrees");
 
   // Move both steppers back 180 degrees
-  targetPositions[0] = -lround(180.0 * stepsPerRevolution / 360.0);  // Stepper 1
-  targetPositions[1] = -lround(180.0 * stepsPerRevolution / 360.0);  // Stepper 2
+  targetPositions[0] = -lround(30.0 * stepsPerRevolution / 360.0);  // Stepper 1
+  targetPositions[1] = -lround(30.0 * stepsPerRevolution / 360.0);  // Stepper 2
 
   // Move steppers to the target positions
   steppers.moveTo(targetPositions);
@@ -62,7 +92,7 @@ void loop() {
     // Keep running until the movement is completed
   }
 
-  Serial.println("Moved back 180 degrees");
+  Serial.println("Both steppers moved back 180 degrees");
 
   delay(1000); // Pause for a moment before looping
 }

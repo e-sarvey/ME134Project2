@@ -22,56 +22,30 @@ def invKin(x, y):
 # This function returns the desired motor angles for a single input point (x,y)
 # Based on code from an existing library, but modified to better handle errors, out of bound positions, and singularity points. Also replaced arccos() use with equivilant atan2() for increased robustness.
     try:
-        # Calculate distance from origin to end effector
         distance = math.sqrt(x**2 + y**2)
-
-        # Pre-calculation for distance from motors
         dist_left = math.sqrt((l0 + x)**2 + y**2)
         dist_right = math.sqrt((l0 - x)**2 + y**2)
 
-        # Handle division by zero for invalid distances
         if dist_left == 0 or dist_right == 0:
-            return None  # Return None to mark as invalid if distances are zero
+            return None
 
-        # Angle from left motor to end effector
         beta1 = math.atan2(y, (l0 + x))
-
-        # Angle from right motor to end effector
         beta2 = math.atan2(y, (l0 - x))
 
-        # Calculate alpha angles using trigonometric identities
-        alpha1 = math.atan2(
-            math.sqrt(l1**2 - (l2**2 - dist_left**2 + l1**2) / (2 * l1 * dist_left)**2),
-            (l2**2 - dist_left**2 + l1**2) / (2 * l1 * dist_left)
-        )
-        alpha2 = math.atan2(
-            math.sqrt(l1**2 - (l2**2 - dist_right**2 + l1**2) / (2 * l1 * dist_right)**2),
-            (l2**2 - dist_right**2 + l1**2) / (2 * l1 * dist_right)
-        )
+        alpha1 = math.acos((l1**2 + dist_left**2 - l2**2) / (2 * l1 * dist_left))
+        alpha2 = math.acos((l1**2 + dist_right**2 - l2**2) / (2 * l1 * dist_right))
 
-        # Compute final shoulder angles
         shoulder1 = beta1 + alpha1
         shoulder2 = math.pi - beta2 - alpha2
 
-        # Ensure angles are within valid range
         if shoulder1 < 0 or shoulder1 > math.pi or shoulder2 < 0 or shoulder2 > math.pi:
-            return None  # Invalid angle regime detected
-
-        # Calculate forward kinematics to get passive joint positions
-        p1_x = -l0 + l1 * math.cos(shoulder1)
-        p1_y = l1 * math.sin(shoulder1)
-        p2_x = l0 + l1 * math.cos(shoulder2)
-        p2_y = l1 * math.sin(shoulder2)
-
-        # Validate end effector position
-        if y < min(p1_y, p2_y):
-            return None  # Mark as invalid if end effector y-coordinate is below the farther passive joint y-coordinate
+            return None
 
         return (shoulder1, shoulder2)
 
     except Exception as e:
         print(f"Error occurred at (x, y) = ({x}, {y}): {e}")
-        return None  # Return None if any error occurs during calculations
+        
 
 def armSim(formatted_thetas):
 # This function simulates the position of the arm and input path
@@ -154,9 +128,10 @@ def armSim(formatted_thetas):
 
 def main():
     # Input trajectory. This section can be updated to use a different trajectory planning function in the future.
-    trajectory_x = [0,-2, -2, 2, 2, -2,0]  # Example trajectories (2x2 square)
-    trajectory_y = [15.86,12, 10, 10, 12, 12,15.86] 
-
+    #trajectory_x = [0,-2, -2, 2, 2, -2, 0]  # Example trajectories (2x2 square)
+    #trajectory_y = [15.86,12, 10, 10, 12, 12,15.86] 
+    trajectory_x = [0, 0, 0 , 0, 0, 0, 0]  # Example trajectories (2x2 square)
+    trajectory_y = [15.86, 14, 13, 12, 11, 10, 15.86] 
     # trajectory vectors need to be the same length of course
     if len(trajectory_x) != len(trajectory_y):
         print("Desired trajectories are incompatible sizes")
@@ -171,7 +146,7 @@ def main():
     print("-------------------------------------------")
     time.sleep(1)
     print("Peparing to send trajectory to ESP-32.......")
-    time.sleep(2)
+    time.sleep(0.5)
     print("SENT!")
     client.publish(topic, formatted_thetas) # SEND OVER MQTT TO RUN ON ESP32 
     time.sleep(1)

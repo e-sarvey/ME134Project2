@@ -11,18 +11,16 @@
 #define STEPPER2_STEP_PIN 12
 #define STEPPER2_DIR_PIN 14
 
-// Define LED pins for debugging. Each turns on depending on secton of code running or complted.
-// LEDS: WFI CONNECTED, MQTT BROKER CONNECTION, TRAJEACTORY COMPLETED, ERROR OCCURED
+// Define LED pins for debugging. Each turns on depending on secton of code running or completed.
+// LEDS: WFI CONNECTED, MQTT BROKER CONNECTION, TRAJECTORY COMPLETED, ERROR OCCURED
 #define WIFI_LED_PIN 35 
 #define MQTT_LED_PIN 34
 #define TRAJECTORY_LED_PIN 39
 #define ERROR_LED_PIN 36
 
-/// Define the initial offset for the steppers (in degrees)
-// We wll want to update this with a homing sequence so we know the starting position of the arm more accurately for the IK results to be more accurate
-// We should also update comments to explain which stepper is #1 vs #2 ...
-const float INITIAL_OFFSET_1 = -90.0;  // Offset for Stepper 1
-const float INITIAL_OFFSET_2 = -90.0;  // Offset for Stepper 2
+// Define the initial offset for the steppers (in degrees)
+const float INITIAL_OFFSET_1 = 0.0;  // Offset for Stepper 1
+const float INITIAL_OFFSET_2 = 0.0;  // Offset for Stepper 2
 
 int stepsPerRevolution = 200; // to calculate angles
 
@@ -46,9 +44,8 @@ const int mqtt_port = 1883;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-
 void setup_wifi() {
-  // This function connects the ESP to the wifi network specified by ssid and password included previously
+  // Connect the ESP to the wifi network specified by ssid and password
   delay(10);
   Serial.println("Connecting to Wi-Fi...");
   WiFi.begin(ssid, password);
@@ -62,10 +59,8 @@ void setup_wifi() {
   digitalWrite(WIFI_LED_PIN, HIGH);  // Turn on Wi-Fi LED when connected
 }
 
-
 void moveMotors(float** angles, int numAngles) {
-  // This function moves both stepper motors through an array of angles input.
-  // Input: 2xN array of angle pairs to move through, int, N number of angle pairs to pass through (required for dynamic array with proper memory allocation)
+  // Move both stepper motors through an array of angles
   long targetPositions[2];
   
   for (int currentAngleIndex = 0; currentAngleIndex < numAngles; currentAngleIndex++) {
@@ -74,51 +69,48 @@ void moveMotors(float** angles, int numAngles) {
     float adjustedAngle2 = angles[1][currentAngleIndex] + INITIAL_OFFSET_2;
 
     targetPositions[0] = lround(adjustedAngle1 * stepsPerRevolution / 360.0);  // conversion from angles to steps
-    targetPositions[1] = lround(adjustedAngle2 * stepsPerRevolution / 360.0);  
-    // Serial printing for debugging
-    Serial.print("Stepper 1 Target Position (steps): ");
-    Serial.println(targetPositions[0]);
-    Serial.print("Stepper 2 Target Position (steps): ");
-    Serial.println(targetPositions[1]);
-    
-    steppers.moveTo(targetPositions);  // Move both motors simultaneously
-    steppers.runSpeedToPosition();     // Blocking function, waits until both motors reach target. (There is a non-blocking function which is just run() which returns a boolean true while running if we need that functionality)
+    targetPositions[1] = lround(adjustedAngle2 * stepsPerRevolution / 360.0);
 
-    delay(2000);  // Give a little room for error in the motor timing. Not sure how accurate the library is...
+    // Debugging: Print target positions in steps
+    Serial.printf("Stepper 1 Target Position (steps): %ld\n", targetPositions[0]);
+    Serial.printf("Stepper 2 Target Position (steps): %ld\n", targetPositions[1]);
+
+    steppers.moveTo(targetPositions);  // Move both motors simultaneously
+    while(steppers.run()){
+    }   // Blocking function, waits until both motors reach the target
+    delay(10);  // Give some time for the motors to settle
   }
+
   digitalWrite(TRAJECTORY_LED_PIN, HIGH);  // Turn on Trajectory Finished LED
 }
 
 void parseAndMoveMotors(char* message, unsigned int length) {
-  // This function parses the character message recieved via MQTT and creates a 2xN angle array, then calls moveMotors() with that array.
-  // ASSUMES ANGLE PAIRS LISTED LIKE AN Nx2 MATLAB ARRAY: ex. (90.0,-90.0),(-30.0,180.0) would be sent and parsed as "90.0,-90.0;-30.0,180.0"
-  // Takes in the message and message length for memory allocation.
-  int numAngles = 0; // initialize
+  // Parse the message and create a 2xN angle array, then call moveMotors()
+  int numAngles = 0;
 
-  // Make a copy of the message to avoid modifying the original
+  // Make a copy of the message
   char* messageCopy = new char[length + 1];
   strncpy(messageCopy, message, length);
   messageCopy[length] = '\0';
 
-  // Count the number of semicolons to determine how many angle pairs there are
+  // Count semicolons to determine the number of angle pairs
   for (int i = 0; i < length; i++) {
     if (message[i] == ';') {
       numAngles++;
     }
   }
-  numAngles++;  // One more than the number of semicolons since semicolons before 
+  numAngles++;  // One more than the number of semicolons
 
   // Allocate memory for angles
   float** angles = new float*[2];
   angles[0] = new float[numAngles];  
   angles[1] = new float[numAngles];  
 
-  // Use a single strtok loop to tokenize and parse the angle pairs
+  // Tokenize and parse angle pairs
   char* pairToken = strtok(messageCopy, ";");
   int index = 0;
 
   while (pairToken != NULL && index < numAngles) {
-    // Use sscanf to parse both angles from the pair at once
     float angle1, angle2;
     if (sscanf(pairToken, "%f,%f", &angle1, &angle2) == 2) {
       angles[0][index] = angle1;
@@ -126,37 +118,28 @@ void parseAndMoveMotors(char* message, unsigned int length) {
     } else {
       Serial.println("Error parsing angles!");
     }
-
     pairToken = strtok(NULL, ";");
     index++;
   }
 
-  // Debugging: Print parsed angles to make sure the angles parsed match the message recieved
+  // Debugging: Print parsed angles
   Serial.print("Parsed Motor 1 Angles: ");
   for (int i = 0; i < numAngles; i++) {
-    Serial.print(angles[0][i]);
-    if (i < numAngles - 1) {
-      Serial.print(", ");
-    }
+    Serial.printf("%f", angles[0][i]);
+    if (i < numAngles - 1) Serial.print(", ");
   }
   Serial.println();
 
   Serial.print("Parsed Motor 2 Angles: ");
   for (int i = 0; i < numAngles; i++) {
-    Serial.print(angles[1][i]);
-    if (i < numAngles - 1) {
-      Serial.print(", ");
-    }
+    Serial.printf("%f", angles[1][i]);
+    if (i < numAngles - 1) Serial.print(", ");
   }
-  // DEBUGGING CODE COMMENTED OUT. HAD TO MAKE SURE CORRECT NUMBER OF ANGLES WERE BEING PARSED
-  //Serial.println();
+  Serial.println();
 
-  //Serial.print("Total Parsed Angle Pairs: ");
- // Serial.println(numAngles);
+  moveMotors(angles, numAngles);
 
-  moveMotors(angles, numAngles); // now use moveMotor() func to execute trajectory on steppers
-
-  // Clean up for dynamoc memory managment. This way we can recieve messages, and control motors several times without filling up memory
+  // Clean up
   delete[] angles[0];
   delete[] angles[1];
   delete[] angles;
@@ -164,10 +147,8 @@ void parseAndMoveMotors(char* message, unsigned int length) {
 }
 
 void MessageRecieved(char* topic, byte* message, unsigned int length) {
-  // MQTT callback to recieve messages from broker
-  Serial.print("Message received in topic: ");
-  Serial.println(topic);
-  Serial.print("Message: ");
+  // MQTT callback to receive messages from the broker
+  Serial.printf("Message received in topic: %s\n", topic);
   
   char msg[length + 1];
   for (int i = 0; i < length; i++) {
@@ -175,15 +156,14 @@ void MessageRecieved(char* topic, byte* message, unsigned int length) {
   }
   msg[length] = '\0';  
 
-  Serial.print("Message: ");
-  Serial.println(msg);
+  Serial.printf("Message: %s\n", msg);
 
   parseAndMoveMotors(msg, length);
   digitalWrite(MQTT_LED_PIN, HIGH);  // Turn on MQTT LED
 }
 
 void reconnect() {
-// This function handles dropped wifi connections and reconnects ESP to internet and MQTT
+  // Handle dropped WiFi connections and reconnect ESP to the internet and MQTT
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     
@@ -191,10 +171,8 @@ void reconnect() {
       Serial.println("Connected");
       client.subscribe(topic);
     } else {
-      Serial.print("Failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" trying again in 5 seconds"); // Repeats until connected
-      digitalWrite(ERROR_LED_PIN, HIGH);  // Turn on Error LED if inital connection fails
+      Serial.printf("Failed, rc=%d, trying again in 5 seconds\n", client.state());
+      digitalWrite(ERROR_LED_PIN, HIGH);  // Turn on Error LED if initial connection fails
       delay(5000);
     }
   }
@@ -205,7 +183,7 @@ void reconnect() {
 void setup() {
   Serial.begin(115200); // establish serial connection
 
-// SETUP LEDS
+  // Setup LEDs
   pinMode(WIFI_LED_PIN, OUTPUT);
   pinMode(MQTT_LED_PIN, OUTPUT);
   pinMode(TRAJECTORY_LED_PIN, OUTPUT);
@@ -216,21 +194,19 @@ void setup() {
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(MessageRecieved);
 
-  stepper1.setMaxSpeed(20); 
-  stepper1.setAcceleration(10);
+  stepper1.setMaxSpeed(100); 
+  stepper1.setAcceleration(50);
   
-  stepper2.setMaxSpeed(20);
-  stepper2.setAcceleration(10);
+  stepper2.setMaxSpeed(100);
+  stepper2.setAcceleration(50);
 
   steppers.addStepper(stepper1);
   steppers.addStepper(stepper2);
 }
 
-// MAIN LOOPING CODE: "While True" //
+// MAIN LOOPING CODE //
 void loop() {
-// really simple loop that just makes sure we are connected to wifi since the callback handles the rest of the control. 
-// It's probably not best practice to use the callback to call function to parse the message but its ok for now since we should only recieve one at a time but if we had multiple callbacks I'm not sure how calling the other functions inside it would effect the performance.
-
+  // Check WiFi connection, the callback handles the rest
   if (!client.connected()) {
     reconnect();
   }
