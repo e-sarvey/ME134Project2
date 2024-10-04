@@ -6,10 +6,11 @@
     1. [CAD](#CAD)
 2. [Repository Contents](#repository-contents)
     1. [main_pc_program.py](#1-main_pc_programpy)
-    2. [trackpad_tracing.py](#2-trackpad_tracingpy)
-    3. [stepper_testing.ino](#3-stepper_testingino)
-    4. [MQTT_testing.ino](#4-mqtt_testingino)
-    5. [main_esp32_code.ino](#5-main_esp32_codeino)
+    2. [main_esp32_code.ino](#2-main_esp32_codeino)
+    3. [trackpad_tracing.py](#3-trackpad_tracingpy)
+    4. [stepper_testing.ino](#4-stepper_testingino)
+    5. [MQTT_testing.ino](#5-mqtt_testingino)
+    
 3. [How to Run the Project](#how-to-run-the-project)
 4. [Future Work](#future-work)
 ## Project Overview
