@@ -16,7 +16,7 @@
 
 The assignment for this project was to build a robot arm that can draw our initials. The robot arm had to have coupled degrees of freedom, meaning no 3d-printer style linear gantrys were allowed.
 
-<img width="497" alt="Screenshot 2024-10-03 at 8 53 23 PM" src="https://github.com/user-attachments/assets/482dc666-0159-4b6e-83b4-d2996179d737">
+<img width="450" alt="Screenshot 2024-10-03 at 8 53 23 PM" src="https://github.com/user-attachments/assets/482dc666-0159-4b6e-83b4-d2996179d737">
 
 Our goal with this project was to make a drawing robot that was versitile and unique. We chose a 5-bar design because it offers both stability with both actuators at the base, and a "coolness" factor since it is unlike the common two link drawing arms. Our stretch goals were to implement a retractable pen holder for drawing discontinuous curves and include an easy method for the user to input any trajectory using the computer trackpad and have the robot draw it out.
 
