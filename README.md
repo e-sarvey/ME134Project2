@@ -1,6 +1,4 @@
-# ME134Project2
-
-This repository contains the code for ME-134: Robotics Project/Homework 2.
+# ME134Project2: 5-Bar Drawing Arm
 
 ## Table of Contents
 
@@ -13,7 +11,6 @@ This repository contains the code for ME-134: Robotics Project/Homework 2.
     5. [main_esp32_code.ino](#5-main_esp32_codeino)
 3. [How to Run the Project](#how-to-run-the-project)
 4. [Future Work](#future-work)
-
 ## Project Overview
 
 The assignment for this project was to build a robot arm that can draw our initials. The robot arm had to have coupled degrees of freedom, meaning no 3d-printer style linear gantrys were allowed.
