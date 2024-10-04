@@ -165,14 +165,14 @@ def armSim(formatted_thetas):
 
 def main():
     # Input trajectory. This section can be updated to use a different trajectory planning function in the future.
-    #trajectory_x = [0,-2, -2, 2, 2, -2, 0]  # Example trajectories (2x2 square)
-    #trajectory_y = [15.86,12, 10, 10, 12, 12,15.86] 
+    #trajectory_x = [3]  # Example trajectories (2x2 square)
+    #trajectory_y = [8] 
     #trajectory_x = [0, 0, 0 , 0, 0, 0, 0]  # Example trajectories (2x2 square)
     #trajectory_y = [15.86, 14, 13, 12, 11, 10, 15.86]
-    trajectory_x, trajectory_y = drawer.clickDraw(save=False,scale_factor=4, offset=(-1.5, 7.5)) # you have to draw twice for some reason
+    trajectory_x, trajectory_y = drawer.clickDraw(save=False,scale_factor=2, offset=(-1, 9)) # you have to draw twice for some reason
     time.sleep(0.5)
     workspaceMap(x_traj=trajectory_x,y_traj=trajectory_y)
-    # trajectory vectors need to be the same length of course
+    #trajectory vectors need to be the same length of course
     if len(trajectory_x) != len(trajectory_y):
         print("Desired trajectories are incompatible sizes")
         return
@@ -181,7 +181,8 @@ def main():
     thetas = [(math.degrees(result[0]), math.degrees(result[1])) if result else None for result in results] # convert to degrees
     valid_thetas = [theta for theta in thetas if theta is not None] # make sure None doesnt get passed to the ESP
     formatted_thetas = ";".join([f"{theta1:.2f},{theta2:.2f}" for theta1, theta2 in valid_thetas]) # reformat into structure that matches parsing on ESP to be sent over MQTT
-    
+    #formatted_thetas = "101.94,40.25;101.18,55.09;98.20,73.27;106.73,81.80;124.91,78.82;139.75,78.06;129.91,88.16;83.88,103.07;76.93,96.12;91.84,50.09"
+
     print("Formatted theta string:", formatted_thetas)
     print("-------------------------------------------")
     time.sleep(1)

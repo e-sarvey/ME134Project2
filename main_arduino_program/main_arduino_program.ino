@@ -1,6 +1,6 @@
 #include <WiFi.h>  // Internet connection baby!
-#include <PubSubClient.h> // MQTT client subscribe and publish library for ESP (https://www.arduino.cc/reference/en/libraries/pubsubclient/)
-#include <AccelStepper.h> // Simplifies advanced stepper control including duel steppers in sync (https://www.airspayce.com/mikem/arduino/AccelStepper/)
+#include <PubSubClient.h> // MQTT client subscribe and publish library for ESP
+#include <AccelStepper.h> // Simplifies advanced stepper control including dual steppers in sync
 #include <MultiStepper.h> // Sub class of Accel Stepper for running multiple steppers
 #include <math.h> // so we can calculate things of course
 #include <mysecrets.h> // git ignored file with IP address for MQTT and WIFI credentials
@@ -11,25 +11,17 @@
 #define STEPPER2_STEP_PIN 12
 #define STEPPER2_DIR_PIN 14
 
-// Define LED pins for debugging. Each turns on depending on secton of code running or completed.
-// LEDS: WFI CONNECTED, MQTT BROKER CONNECTION, TRAJECTORY COMPLETED, ERROR OCCURED
+// Define LED pins for debugging. Each turns on depending on section of code running or completed.
 #define WIFI_LED_PIN 35 
 #define MQTT_LED_PIN 34
 #define TRAJECTORY_LED_PIN 39
 #define ERROR_LED_PIN 36
-
-// Define the initial offset for the steppers (in degrees)
-const float INITIAL_OFFSET_1 = 0.0;  // Offset for Stepper 1
-const float INITIAL_OFFSET_2 = 0.0;  // Offset for Stepper 2
 
 int stepsPerRevolution = 200; // to calculate angles
 
 // Create AccelStepper objects for each motor
 AccelStepper stepper1(AccelStepper::DRIVER, STEPPER1_STEP_PIN, STEPPER1_DIR_PIN);
 AccelStepper stepper2(AccelStepper::DRIVER, STEPPER2_STEP_PIN, STEPPER2_DIR_PIN);
-
-// Create MultiStepper object from the two single stepper objects
-MultiStepper steppers;
 
 // WIFI parameters (imported from mysecrets.h)
 const char* ssid = WIFI_SSID;
@@ -61,23 +53,26 @@ void setup_wifi() {
 
 void moveMotors(float** angles, int numAngles) {
   // Move both stepper motors through an array of angles
-  long targetPositions[2];
+  long targetPosition1;
+  long targetPosition2;
   
   for (int currentAngleIndex = 0; currentAngleIndex < numAngles; currentAngleIndex++) {
-    // Apply the offset to the angles
-    float adjustedAngle1 = angles[0][currentAngleIndex] + INITIAL_OFFSET_1; // offset angles by initial position
-    float adjustedAngle2 = angles[1][currentAngleIndex] + INITIAL_OFFSET_2;
-
-    targetPositions[0] = lround(adjustedAngle1 * stepsPerRevolution / 360.0);  // conversion from angles to steps
-    targetPositions[1] = lround(adjustedAngle2 * stepsPerRevolution / 360.0);
+    // Convert angles to steps
+    targetPosition1 = lround(angles[0][currentAngleIndex] * stepsPerRevolution / 360.0);  // conversion from angles to steps
+    targetPosition2 = lround(angles[1][currentAngleIndex] * stepsPerRevolution / 360.0);
 
     // Debugging: Print target positions in steps
-    Serial.printf("Stepper 1 Target Position (steps): %ld\n", targetPositions[0]);
-    Serial.printf("Stepper 2 Target Position (steps): %ld\n", targetPositions[1]);
+    Serial.printf("Stepper 1 Target Position (steps): %ld\n", targetPosition1);
+    Serial.printf("Stepper 2 Target Position (steps): %ld\n", targetPosition2);
 
-    steppers.moveTo(targetPositions);  // Move both motors simultaneously
-    while(steppers.run()){
-    }   // Blocking function, waits until both motors reach the target
+    // Set the target positions
+    stepper1.moveTo(targetPosition1);
+    stepper2.moveTo(targetPosition2);
+
+    // Use the blocking `runToPosition` method
+    stepper1.runToPosition();  // Block until Stepper 1 reaches target
+    stepper2.runToPosition();  // Block until Stepper 2 reaches target
+
     delay(10);  // Give some time for the motors to settle
   }
 
@@ -194,14 +189,17 @@ void setup() {
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(MessageRecieved);
 
-  stepper1.setMaxSpeed(100); 
-  stepper1.setAcceleration(50);
+  stepper1.setMaxSpeed(400); 
+  stepper1.setAcceleration(300);
   
-  stepper2.setMaxSpeed(100);
-  stepper2.setAcceleration(50);
+  stepper2.setMaxSpeed(400);
+  stepper2.setAcceleration(300);
 
-  steppers.addStepper(stepper1);
-  steppers.addStepper(stepper2);
+  // Set current position to 50 steps for both motors
+  stepper1.setCurrentPosition(50);
+  stepper2.setCurrentPosition(50);
+
+  delay(10);
 }
 
 // MAIN LOOPING CODE //
