@@ -2,11 +2,11 @@
 #include <PubSubClient.h> // MQTT library for Arduino
 
 // Replace with your network credentials
-const char* ssid = "Tufts_Robot";
+const char* ssid = "";
 const char* password = "";
 
 // MQTT Broker details
-const char* mqtt_broker = "10.243.82.33"; // Replace with your broker's IP address
+const char* mqtt_broker = ""; // Replace with your broker's IP address
 const char* topic = "test/topic";  // Replace with your desired topic
 const int mqtt_port = 1883;
 
