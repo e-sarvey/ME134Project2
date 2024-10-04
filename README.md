@@ -3,6 +3,7 @@
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
+    1. [CAD](#CAD)
 2. [Repository Contents](#repository-contents)
     1. [main_pc_program.py](#1-main_pc_programpy)
     2. [trackpad_tracing.py](#2-trackpad_tracingpy)
@@ -21,7 +22,8 @@ Our goal with this project was to make a drawing robot that was versitile and un
 
 The largest challenges with this project were getting the steppers to move reliably and avoiding singularity points returned from the inverse kinematics since certain configurations of the arm would remove a degree of freedom and lock up the arm. Late in the project we realized we were not delivering enough current to the steppers and switched to a higher current power supply which moved the steppers more smoothly but not long after switching power supplies we accidentally shorted one of the motor drivers by accident... This is likely why we saw very jittery and inconsistant motion in much of our testing. With the underpowered motors it was hard to tell what inaccuracies were a result fo the hardware and what might be a result of the software. Additional work on the IK solver could address this by using forward kinematics to verify solutions. We had this implemented at one point before realizing our IK was wrong and having to re-calculate it.
 
-<img width="725" alt="Screenshot 2024-10-03 at 3 40 18 PM" src="https://github.com/user-attachments/assets/a4e6fc4c-802e-4c4c-acd0-f669093b4a13">
+## CAD
+<img height="210" alt="Screenshot 2024-10-03 at 3 40 18 PM" src="https://github.com/user-attachments/assets/a4e6fc4c-802e-4c4c-acd0-f669093b4a13">
 <img width="210" alt="Screenshot 2024-09-26 at 2 41 44 PM" src="https://github.com/user-attachments/assets/64d0eb51-2ec1-4ae1-8a40-0da38484db22">
 
 ## Repository Contents
